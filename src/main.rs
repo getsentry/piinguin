@@ -4,17 +4,38 @@ extern crate yew;
 extern crate stdweb;
 extern crate marshal;
 extern crate failure;
+extern crate serde_json;
 
 use yew::prelude::*;
 use failure::{ResultExt, Error};
 
 use marshal::processor::PiiConfig;
-use marshal::protocol::{Annotated, Event};
+use marshal::protocol::{Annotated, Value, Event};
+
+type PiiResult = Result<Annotated<Value>, String>;
+
+static DEFAULT_EVENT: &'static str = r#"
+{
+  "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234",
+  "level": "warning",
+  "extra": {
+    "foo": [1, 2, 3]
+  }
+}
+"#;
+
+static DEFAULT_CONFIG: &'static str = r#"
+{
+  "applications": {
+    "freeform": ["@ip", "@creditcard", "@email"]
+  }
+}
+"#;
 
 struct PiiDemo {
     event: String,
     config: String,
-    output: String,
+    output: PiiResult
 }
 
 impl PiiDemo {
@@ -22,10 +43,17 @@ impl PiiDemo {
         let config = PiiConfig::from_json(&self.config).context(format!("Failed to parse PII config"))?;
         let processor = config.processor();
         let event = Annotated::<Event>::from_json(&self.event).context(format!("Failed to parse event"))?;
+        let stripped_event = processor.process_root_value(event);
+        let json_dump = stripped_event.to_json_pretty().context("Failed to parse PII'd event")?;
+        let mut result = Annotated::<Value>::from_json(&json_dump).context("Failed to serialize PII'd event")?;
 
-        let result = processor.process_root_value(event);
+        if let Some(ref mut value) = result.value_mut() {
+            if let Value::Map(ref mut map) = value {
+                map.remove("_meta");
+            }
+        }
 
-        self.output = result.to_json_pretty()?;
+        self.output = Ok(result);
         Ok(())
     }
 }
@@ -43,18 +71,11 @@ impl Component for PiiDemo {
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         let mut rv = PiiDemo {
-            config: "{\n  \
-              \"applications\": {\n    \
-                \"freeform\": [\"@ip\", \"@creditcard\", \"@email\"]\n  \
-              }\n\
-            }".to_owned(),
-            event: "{\n  \
-              \"message\": \"Paid with card 1234-1234-1234-1234 on d/deadbeef1234\",\n  \
-              \"level\": \"warning\"\n\
-            }".to_owned(),
-            output: "".to_owned()
+            config: DEFAULT_CONFIG.to_owned(),
+            event: DEFAULT_EVENT.to_owned(),
+            output: Err("".to_owned())
         };
-        rv.strip_pii().unwrap();
+        rv.strip_pii().expect("Failed to strip first PII");
         rv
     }
 
@@ -65,7 +86,7 @@ impl Component for PiiDemo {
         }
 
         if let Err(e) = self.strip_pii() {
-            self.output = format!("ERROR: {:?}", e);
+            self.output = Err(format!("ERROR: {:?}", e));
         }
 
         true
@@ -93,7 +114,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                         <div class="col-header",>
                             <h1>{ "Stripped event" }</h1>
                         </div>
-                        <pre class="col-body",>{ &self.output }</pre>
+                        <div class="col-body",>{ self.output.view() }</div>
                     </div>
                     <div class="col",>
                         <div class="col-header",>
@@ -106,6 +127,78 @@ impl Renderable<PiiDemo> for PiiDemo {
                     </div>
                 </div>
             </div>
+        }
+    }
+}
+
+impl Renderable<PiiDemo> for Annotated<Value> {
+    fn view(&self) -> Html<PiiDemo> {
+        let value = match self.value() {
+            Some(Value::Map(map)) => html! {
+                <ul class="json map",>
+                    {
+                        for map.iter().map(|(k, v)| html! {
+                            <li><span class="json key",>{ k }</span>{ v.view() }</li>
+                        })
+                    }
+                </ul>
+            },
+            Some(Value::Array(values)) => html! {
+                <ul class="json array",>
+                    {
+                        for values.iter().map(|v| html! {
+                            <li class="json element",>{ v.view() }</li>
+                        })
+                    }
+                </ul>
+            },
+            Some(Value::String(string)) => html! { <span class="json string",>{ string }</span> },
+            Some(Value::U32(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::U64(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::I32(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::I64(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::F32(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::F64(number)) => html! { <span class="json number",>{ number }</span> },
+            Some(Value::Bool(number)) => html! { <span class="json boolean",>{ number }</span> },
+            Some(Value::Null) => html! { <span class="json null",>{ "null" }</span> },
+            None => html! { <i>{ "redacted" }</i> }
+        };
+
+        if self.meta().is_empty() {
+            value
+        } else {
+            let meta = self.meta();
+
+            html! {
+                <span class="annotated",>
+                    <span class="meta",>
+                        <span class="remarks",>
+                            { serde_json::to_string(&meta.remarks)
+                                .expect("Failed to serialize remark") }
+                        </span>
+                        <span class="errors",>
+                            {
+                                if !meta.errors.is_empty() {
+                                    serde_json::to_string(&meta.errors)
+                                        .expect("Failed to serialize meta errors")
+                                } else {
+                                    String::new()
+                                }
+                            }
+                        </span>
+                    </span>
+                    { value }
+                </span>
+            }
+        }
+    }
+}
+
+impl Renderable<PiiDemo> for PiiResult {
+    fn view(&self) -> Html<PiiDemo> {
+        match self {
+            Ok(x) => x.view(),
+            Err(e) => e.into()
         }
     }
 }

@@ -8,8 +8,8 @@ yew = { git = "https://github.com/DenisKolodin/yew", features = ["toml", "yaml",
 stdweb = "*"
 marshal = { git = "https://github.com/getsentry/marshal", rev = "692fa3b83ecee7d9ed3e2fbfe3ac8576cea0d5ab" }
 serde = "1.0.76"
-serde_derive = "1.0.76"
 failure = "*"
+serde_json = "*"
 
 [patch.crates-io]
 serde = { git = "https://github.com/mitsuhiko/serde", rev = "880a8c0181ad7202950f24cc8f6872994913441d" }
