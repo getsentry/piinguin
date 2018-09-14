@@ -226,7 +226,7 @@ impl Renderable<PiiDemo> for Annotated<Value> {
                             }
                         </div>
                         <div class="json-path",>
-                            { format!("{:?}", meta.path) }
+                            { meta.path.as_ref().map(|x| &**x).unwrap_or("") }
                         </div>
                     </small>
                     { value }
