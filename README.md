@@ -7,8 +7,7 @@ Runs fully in the browser thanks to the power of compilers.
 
 ## Usage
 
-1. [Install rust](https://rustup.rs/)
-2. `rustup target add wasm32-unknown-emscripten`
+[Install rust](https://rustup.rs/)
 
 ```bash
 cargo install cargo-web
