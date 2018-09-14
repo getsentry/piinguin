@@ -251,7 +251,12 @@ impl Component for PiiDemo {
                 ).expect("Rule suggestions failed");
                 self.state = State::SelectPiiRule { path, suggestions };
             }
-            Msg::StartEditing => self.state = State::Editing,
+            Msg::StartEditing => {
+                if self.state == State::Editing {
+                    return false;
+                }
+                self.state = State::Editing;
+            },
         }
 
         true
@@ -267,7 +272,9 @@ impl Renderable<PiiDemo> for PiiDemo {
                     href="./style.css", />
                 <div class="table",>
                     <div class="col",>
-                        <div class="col-header",>
+                        <div 
+                            class="col-header",
+                            onclick=|_| Msg::StartEditing, >
                             <h1>{ "Raw event" }</h1>
                             <p><small>
                                 { "1. Paste an event you want to strip sensitive data from. This website does not send anything to a server." }
@@ -280,11 +287,13 @@ impl Renderable<PiiDemo> for PiiDemo {
                             oninput=|e| Msg::EventInputChanged(e.value), />
                     </div>
                     <div class="col",>
-                        <div class="col-header",>
+                        <div 
+                            class="col-header",
+                            onclick=|_| Msg::StartEditing, >
                             <h1>{ "Stripped event" }</h1>
                             <p><small>{ "2. Click on values you want to remove." }</small></p>
-                            { self.state.view() }
                         </div>
+                        { self.state.view() }
                         <div
                             class="col-body",
                             onclick=|_| Msg::StartEditing, >
@@ -292,7 +301,9 @@ impl Renderable<PiiDemo> for PiiDemo {
                         </div>
                     </div>
                     <div class="col",>
-                        <div class="col-header",>
+                        <div 
+                            class="col-header",
+                            onclick=|_| Msg::StartEditing, >
                             <h1>{ "PII config" }</h1>
                             <p><small>{ "3. Copy the PII config." }</small></p>
                         </div>
@@ -316,25 +327,34 @@ impl Renderable<PiiDemo> for State {
                 ref path,
                 ref suggestions,
             } => {
-                let suggestions = suggestions.clone();
+                if suggestions.is_empty() {
+                    html! {
+                        <div class="choose-rule",>
+                            <strong>{ "Sorry, we don't know how to match this." }</strong>
+                            <p>{ "Click anywhere else to abort" }</p>
+                        </div>
+                    }
+                } else {
+                    let suggestions = suggestions.clone();
 
-                html! {
-                    <div class="choose-rule",>
-                        <h2>{ "Select rule for " }<code>{ path }</code></h2>
-                        <p>{ "Click anywhere else to abort" }</p>
-                        <ul>
-                            {
-                                for suggestions.into_iter().map(|(pii_kind, rule, config)| html! {
-                                    <li><a
-                                        href="#",
-                                        onclick=|_| Msg::PiiConfigChanged(config.clone()),>
-                                        { "Apply rule " }<code>{ rule }</code>
-                                        { " to all " }<code>{ pii_kind }</code>
-                                        { " fields" }</a></li>
-                                })
-                            }
-                        </ul>
-                    </div>
+                    html! {
+                        <div class="choose-rule",>
+                            <h2>{ "Select rule for " }<code>{ path }</code></h2>
+                            <p>{ "Click anywhere else to abort" }</p>
+                            <ul>
+                                {
+                                    for suggestions.into_iter().map(|(pii_kind, rule, config)| html! {
+                                        <li><a
+                                            class="rule-choice",
+                                            onclick=|_| Msg::PiiConfigChanged(config.clone()),>
+                                            { "Apply rule " }<code>{ rule }</code>
+                                            { " to all " }<code>{ pii_kind }</code>
+                                            { " fields" }</a></li>
+                                    })
+                                }
+                            </ul>
+                        </div>
+                    }
                 }
             }
         }
@@ -377,10 +397,10 @@ impl Renderable<PiiDemo> for StrippedEvent {
         if self.meta().is_empty() {
             let path = self.meta().path().expect("No path").to_owned();
             html! {
-                <span class="strippable",
+                <a class="strippable",
                     onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
                     { value }
-                </span>
+                </a>
             }
         } else {
             let meta = self.meta();

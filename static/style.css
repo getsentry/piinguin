@@ -14,7 +14,7 @@ html, body {
 }
 
 .col {
-    padding: 15px;
+    margin: 10px;
     display: flex;
     flex-direction: column;
     width: 33%;
@@ -121,4 +121,24 @@ small {
 
 .state-select-pii-rule textarea {
     color: gray;
+}
+
+.choose-rule {
+    padding: 5px 15px;
+    background: lightyellow;
+}
+
+a.rule-choice,
+.json.array:before,
+.json.array:after,
+.json.map:before,
+.json.map:after,
+.json.string,
+.json.number {
+    cursor: pointer;
+}
+
+a.rule-choice {
+    color: blue;
+    text-decoration: underline;
 }
