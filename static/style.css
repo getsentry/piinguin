@@ -21,8 +21,16 @@ html, body {
     flex-grow: 1;
 }
 
-.col-header h1 {
+h1 {
     font: 24px Georgia;
+}
+
+h2 {
+    font: 20px Arial;
+}
+
+.col-header > p {
+    height: 25px;
 }
 
 .col-body {
@@ -53,10 +61,20 @@ pre {
 .json.map, .json.array {
     list-style: none;
     padding-left: 0;
+    display: inline;
 }
 
 .json > li {
     margin-left: 15px;
+    display: block;
+}
+
+.json > li:after {
+    content: ",";
+}
+
+.json > li:last-child:after {
+    content: none;
 }
 
 .json.key {
@@ -94,5 +112,13 @@ pre {
 }
 
 small {
+    color: gray;
+}
+
+.strippable:hover {
+    background-color: lightgray;
+}
+
+.state-select-pii-rule textarea {
     color: gray;
 }
