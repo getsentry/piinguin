@@ -78,31 +78,29 @@ impl Renderable<PiiDemo> for PiiDemo {
             <div>
                 <link
                     rel="stylesheet",
-                    href="https://unpkg.com/tachyons@4.10.0/css/tachyons.min.css", />
-                <div class="flex",>
-                    <div class="w-100 bg-white",>
-                        <div class="vh-25 overflow-auto",>
-                            <h1 class="code",>{ "Raw event" }</h1>
+                    href="./style.css", />
+                <div class="table",>
+                    <div class="col",>
+                        <div class="col-header",>
+                            <h1>{ "Raw event" }</h1>
                         </div>
                         <textarea
-                            class="code w-100 vh-75",
+                            class="col-body",
                             value=&self.event,
                             oninput=|e| Msg::EventInputChanged(e.value), />
                     </div>
-                    <div class="w-100 bg-near-white",>
-                        <div class="vh-25 overflow-auto",>
-                            <h1 class="code",>{ "Stripped event" }</h1>
+                    <div class="col",>
+                        <div class="col-header",>
+                            <h1>{ "Stripped event" }</h1>
                         </div>
-                        <pre class="w-100 vh-75", style="white-space: pre-wrap",>
-                            { &self.output }
-                        </pre>
+                        <pre class="col-body",>{ &self.output }</pre>
                     </div>
-                    <div class="w-100 bg-light-gray",>
-                        <div class="vh-25 overflow-auto",>
-                            <h1 class="code",>{ "PII config" }</h1>
+                    <div class="col",>
+                        <div class="col-header",>
+                            <h1>{ "PII config" }</h1>
                         </div>
                         <textarea
-                            class="code w-100 vh-75",
+                            class="col-body",
                             value=&self.config,
                             oninput=|e| Msg::PiiConfigChanged(e.value), />
                     </div>
