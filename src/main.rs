@@ -19,7 +19,7 @@ static DEFAULT_EVENT: &'static str = r#"
   "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234",
   "level": "warning",
   "extra": {
-    "foo": [1, 2, 3]
+    "foo": [1, 2, 3, "127.0.0.1"]
   }
 }
 "#;
@@ -27,10 +27,49 @@ static DEFAULT_EVENT: &'static str = r#"
 static DEFAULT_CONFIG: &'static str = r#"
 {
   "applications": {
-    "freeform": ["@ip", "@creditcard", "@email"]
+    "freeform": ["@creditcard"],
+    "databag": ["@ip"]
   }
 }
 "#;
+
+static PII_KINDS: &[&'static str] = &[
+    "freeform",
+    "ip",
+    "id",
+    "username",
+    "hostname",
+    "sensitive",
+    "name",
+    "email",
+    "databag"
+];
+
+static BUILTIN_RULES: &[&'static str] = &[
+    "@ip",
+    "@ip:replace",
+    "@ip:hash",
+    "@imei",
+    "@imei:replace",
+    "@imei:hash",
+    "@mac",
+    "@mac:replace",
+    "@mac:mask",
+    "@mac:hash",
+    "@email",
+    "@email:mask",
+    "@email:replace",
+    "@email:hash",
+    "@creditcard",
+    "@creditcard:mask",
+    "@creditcard:replace",
+    "@creditcard:hash",
+    "@userpath",
+    "@userpath:replace",
+    "@userpath:hash",
+    "@password",
+    "@password:remove"
+];
 
 struct PiiDemo {
     event: String,
@@ -171,12 +210,12 @@ impl Renderable<PiiDemo> for Annotated<Value> {
 
             html! {
                 <span class="annotated",>
-                    <span class="meta",>
-                        <span class="remarks",>
+                    <small class="meta",>
+                        <div class="remarks",>
                             { serde_json::to_string(&meta.remarks)
                                 .expect("Failed to serialize remark") }
-                        </span>
-                        <span class="errors",>
+                        </div>
+                        <div class="errors",>
                             {
                                 if !meta.errors.is_empty() {
                                     serde_json::to_string(&meta.errors)
@@ -185,8 +224,11 @@ impl Renderable<PiiDemo> for Annotated<Value> {
                                     String::new()
                                 }
                             }
-                        </span>
-                    </span>
+                        </div>
+                        <div class="json-path",>
+                            { format!("{:?}", meta.path) }
+                        </div>
+                    </small>
                     { value }
                 </span>
             }

@@ -91,6 +91,8 @@ pre {
 
 .meta {
     float: right;
-    font-size: 12px;
+}
+
+small {
     color: gray;
 }
