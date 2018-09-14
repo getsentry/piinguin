@@ -11,7 +11,9 @@ Runs fully in the browser thanks to the power of compilers.
 
 ```bash
 cargo install cargo-web
-cargo web start  # this will ask you to install more stuff, do it and rerun the command
+
+# this will ask you to install more stuff, do it and rerun the command
+cargo web start --release
 ```
 
 It should print out the URL to the local server.
