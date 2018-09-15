@@ -103,7 +103,6 @@ fn get_rule_suggestions(
     let old_result = config.strip_event(event)?;
     let old_value = get_value_by_path(&old_result, path)
         .unwrap_or_else(|| panic!("Path {} not in old value", path));
-    println!("Old value: {:?}", old_value);
 
     let parsed_config = match serde_json::from_str(&config.0)? {
         serde_json::Value::Object(x) => x,
@@ -142,8 +141,6 @@ fn get_rule_suggestions(
             };
 
             let new_value = get_value_by_path(&new_result, path);
-            println!("New value: {:?}", new_value);
-
             if new_value != Some(old_value) {
                 rv.push(((*pii_kind).to_owned(), (*rule).to_owned(), new_config));
             }
@@ -373,7 +370,7 @@ impl Renderable<PiiDemo> for StrippedEvent {
                 <ul class="json map",>
                     {
                         for map.iter().map(|(k, v)| html! {
-                            <li><span class="json key",>{ k }</span>{ v.view() }</li>
+                            <li><span class="json key",>{ k }</span>{ ": " }{ v.view() }</li>
                         })
                     }
                 </ul>

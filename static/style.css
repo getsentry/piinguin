@@ -90,8 +90,10 @@ pre {
 }
 
 .json.string:before, 
-.json.key:before, 
-.json.string:after {
+.json.string:after,
+.json.key:before,
+.json.key:after
+{
     content: '"';
 }
 
@@ -101,10 +103,6 @@ pre {
 
 .json.number {
     color: blue;
-}
-
-.json.key:after {
-    content: '":\00a0';
 }
 
 .annotated {
