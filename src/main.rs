@@ -99,7 +99,7 @@ fn get_rule_suggestions_for_value(
     event: &SensitiveEvent,
     config: &PiiConfig,
     path: &str,
-) -> Result<Vec<(String, String, PiiConfig)>, Error> {
+) -> Result<Vec<PiiRuleSuggestion>, Error> {
     let old_result = config.strip_event(event)?;
     let old_value = get_value_by_path(&old_result, path)
         .unwrap_or_else(|| panic!("Path {} not in old value", path));
@@ -142,7 +142,11 @@ fn get_rule_suggestions_for_value(
 
             let new_value = get_value_by_path(&new_result, path);
             if new_value != Some(old_value) {
-                rv.push(((*pii_kind).to_owned(), (*rule).to_owned(), new_config));
+                rv.push(PiiRuleSuggestion::Value {
+                    pii_kind: (*pii_kind).to_owned(),
+                    rule: (*rule).to_owned(),
+                    config: new_config
+                });
             }
         }
     }
@@ -180,9 +184,36 @@ impl PiiConfig {
 enum State {
     Editing,
     SelectPiiRule {
-        path: String,
-        suggestions: Vec<(String, String, PiiConfig)>,
+        request: PiiRulesRequest,
+        suggestions: Vec<PiiRuleSuggestion>,
     },
+}
+
+#[derive(Eq, PartialEq)]
+enum PiiRuleSuggestion {
+    Value {
+        pii_kind: String,
+        rule: String,
+        config: PiiConfig
+    }
+}
+
+impl Renderable<PiiDemo> for PiiRuleSuggestion {
+    fn view(&self) -> Html<PiiDemo> {
+        match *self {
+            PiiRuleSuggestion::Value { ref pii_kind, ref rule, ref config } => {
+                let config = config.clone();
+                html! {
+                    <li><a
+                        class="rule-choice",
+                        onclick=|_| Msg::PiiConfigChanged(config.clone()),>
+                        { "Apply rule " }<code>{ rule }</code>
+                    { " to all " }<code>{ pii_kind }</code>
+                    { " fields" }</a></li>
+                }
+            }
+        }
+    }
 }
 
 impl fmt::Display for State {
@@ -212,10 +243,39 @@ impl PiiDemo {
     }
 }
 
+#[derive(PartialEq, Eq)]
+enum PiiRulesRequest {
+    Value { path: String }
+}
+
+impl PiiRulesRequest {
+    fn get_suggestions(&self, pii_demo: &PiiDemo) -> Vec<PiiRuleSuggestion> {
+        match *self {
+            PiiRulesRequest::Value { ref path } => get_rule_suggestions_for_value(
+                    &pii_demo
+                        .get_sensitive_event()
+                        .expect("Current event unparseable"),
+                    &pii_demo.config,
+                    &path,
+                ).expect("Rule suggestions failed")
+        }
+    }
+}
+
+impl Renderable<PiiDemo> for PiiRulesRequest {
+    fn view(&self) -> Html<PiiDemo> {
+        match *self {
+            PiiRulesRequest::Value { ref path } => html! {
+                <h2>{ "Select rule for " }<code>{ path }</code></h2>
+            }
+        }
+    }
+}
+
 enum Msg {
     PiiConfigChanged(PiiConfig),
     EventInputChanged(String),
-    SelectPiiRule { path: String },
+    SelectPiiRule(PiiRulesRequest),
     StartEditing,
 }
 
@@ -243,15 +303,9 @@ impl Component for PiiDemo {
                 self.event = value;
                 self.state = State::Editing;
             }
-            Msg::SelectPiiRule { path } => {
-                let suggestions = get_rule_suggestions_for_value(
-                    &self
-                        .get_sensitive_event()
-                        .expect("Current event unparseable"),
-                    &self.config,
-                    &path,
-                ).expect("Rule suggestions failed");
-                self.state = State::SelectPiiRule { path, suggestions };
+            Msg::SelectPiiRule(request) => {
+                let suggestions = request.get_suggestions(&self);
+                self.state = State::SelectPiiRule { request, suggestions };
             }
             Msg::StartEditing => {
                 if self.state == State::Editing {
@@ -326,7 +380,7 @@ impl Renderable<PiiDemo> for State {
         match *self {
             State::Editing => "".into(),
             State::SelectPiiRule {
-                ref path,
+                ref request,
                 ref suggestions,
             } => {
                 if suggestions.is_empty() {
@@ -341,19 +395,10 @@ impl Renderable<PiiDemo> for State {
 
                     html! {
                         <div class="choose-rule",>
-                            <h2>{ "Select rule for " }<code>{ path }</code></h2>
+                            { request.view() }
                             <p>{ "Click anywhere else to abort" }</p>
                             <ul>
-                                {
-                                    for suggestions.into_iter().map(|(pii_kind, rule, config)| html! {
-                                        <li><a
-                                            class="rule-choice",
-                                            onclick=|_| Msg::PiiConfigChanged(config.clone()),>
-                                            { "Apply rule " }<code>{ rule }</code>
-                                            { " to all " }<code>{ pii_kind }</code>
-                                            { " fields" }</a></li>
-                                    })
-                                }
+                                { for suggestions.into_iter().map(Renderable::view) }
                             </ul>
                         </div>
                     }
@@ -367,9 +412,9 @@ impl Renderable<PiiDemo> for StrippedEvent {
     fn view(&self) -> Html<PiiDemo> {
         let path = self.meta().path().expect("No path").to_owned();
 
-        let wrap_strippable = |html| html! {
+        let strippable_value = |html| html! {
             <a class="strippable",
-                onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
+                onclick=|_| Msg::SelectPiiRule(PiiRulesRequest::Value { path: path.clone() }) ,>
                 { html }
             </a>
         };
@@ -393,15 +438,15 @@ impl Renderable<PiiDemo> for StrippedEvent {
                     }
                 </ul>
             },
-            Some(Value::String(string)) => wrap_strippable(html! { <span class="json string",>{ string }</span> }),
-            Some(Value::U32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::U64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::I32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::I64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::F32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::F64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::Bool(number)) => wrap_strippable(html! { <span class="json boolean",>{ number }</span> }),
-            Some(Value::Null) => wrap_strippable(html! { <span class="json null",>{ "null" }</span> }),
+            Some(Value::String(string)) => strippable_value(html! { <span class="json string",>{ string }</span> }),
+            Some(Value::U32(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::U64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::I32(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::I64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::F32(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::F64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::Bool(number)) => strippable_value(html! { <span class="json boolean",>{ number }</span> }),
+            Some(Value::Null) => strippable_value(html! { <span class="json null",>{ "null" }</span> }),
             None => html! { <i>{ "redacted" }</i> },
         };
 
