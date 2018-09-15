@@ -27,7 +27,17 @@ static DEFAULT_EVENT: &'static str = r#"{
   }
 }"#;
 
-static DEFAULT_CONFIG: &'static str = r#"{}"#;
+static DEFAULT_CONFIG: &'static str = r#"{
+  "rules": {
+    "device_id": {
+      "type": "pattern",
+      "pattern": "d/[a-f0-9]{12}",
+      "redaction": {
+        "method": "hash"
+      }
+    }
+  }
+}"#;
 
 static PII_KINDS: &[&'static str] = &[
     "freeform",
@@ -101,9 +111,6 @@ fn get_rule_suggestions(
     let old_value = get_value_by_path(&old_result, path)
         .unwrap_or_else(|| panic!("Path {} not in old value", path));
     println!("Old value: {:?}", old_value);
-    if old_value.meta().has_remarks() {
-        panic!("Attempted to suggest rules for value with metadata");
-    }
 
     let parsed_config = match serde_json::from_str(&config.0)? {
         serde_json::Value::Object(x) => x,
@@ -112,8 +119,17 @@ fn get_rule_suggestions(
 
     let mut rv = vec![];
 
-    for pii_kind in PII_KINDS {
-        for rule in BUILTIN_RULES {
+    let rules = BUILTIN_RULES.iter().map(|x| *x).chain(
+        parsed_config
+            .get("rules")
+            .and_then(|rules_value| rules_value.as_object())
+            .map(|rules_map| rules_map.keys().map(|x| &**x))
+            .into_iter()
+            .flatten(),
+    );
+
+    for rule in rules {
+        for pii_kind in PII_KINDS {
             let mut new_config = parsed_config.clone();
             new_config
                 .entry("applications")
@@ -252,7 +268,7 @@ impl Component for PiiDemo {
                     return false;
                 }
                 self.state = State::Editing;
-            },
+            }
         }
 
         true
@@ -269,7 +285,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                     href="./style.css", />
                 <div class="table",>
                     <div class="col",>
-                        <div 
+                        <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
                             <h1>{ "Raw event" }</h1>
@@ -284,7 +300,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                             oninput=|e| Msg::EventInputChanged(e.value), />
                     </div>
                     <div class="col",>
-                        <div 
+                        <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
                             <h1>{ "Stripped event" }</h1>
@@ -298,7 +314,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                         </div>
                     </div>
                     <div class="col",>
-                        <div 
+                        <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
                             <h1>{ "PII config" }</h1>
@@ -360,7 +376,7 @@ impl Renderable<PiiDemo> for State {
 
 impl Renderable<PiiDemo> for StrippedEvent {
     fn view(&self) -> Html<PiiDemo> {
-        let value = match self.value() {
+        let mut value = match self.value() {
             Some(Value::Map(map)) => html! {
                 <ul class="json map",>
                     {
@@ -391,18 +407,18 @@ impl Renderable<PiiDemo> for StrippedEvent {
             None => html! { <i>{ "redacted" }</i> },
         };
 
-        if self.meta().is_empty() {
-            let path = self.meta().path().expect("No path").to_owned();
-            html! {
-                <a class="strippable",
-                    onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
-                    { value }
-                </a>
-            }
-        } else {
+        let path = self.meta().path().expect("No path").to_owned();
+        value = html! {
+            <a class="strippable",
+                onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
+                { value }
+            </a>
+        };
+
+        if !self.meta().is_empty() {
             let meta = self.meta();
 
-            html! {
+            value = html! {
                 <span class="annotated",>
                     <small class="meta",>
                         <div class="remarks",>
@@ -424,6 +440,8 @@ impl Renderable<PiiDemo> for StrippedEvent {
                 </span>
             }
         }
+
+        value
     }
 }
 
