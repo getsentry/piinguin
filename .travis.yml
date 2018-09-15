@@ -1,0 +1,24 @@
+language: rust
+cache: cargo
+
+rust:
+  - stable
+  - nightly
+
+script:
+  # on Travis-CI, publish the docs
+  - cargo install --force cargo-web
+  - rm -rf ./target/deploy/
+  - cargo web deploy --release
+  - |
+    set -e
+    if [ "$TRAVIS_RUST_VERSION" = stable ] &&
+       [ "$TRAVIS_PULL_REQUEST" = false ] &&
+       [ "$TRAVIS_BRANCH" = master ]; then
+      git clone https://github.com/davisp/ghp-import.git
+      ./ghp-import/ghp_import.py \
+        -n -p -f -m "Site deploy" -b gh-pages \
+        -r https://"$GH_TOKEN"@github.com/$TRAVIS_REPO_SLUG.git \
+        ./target/deploy/
+      echo "Uploaded documentation"
+    fi
