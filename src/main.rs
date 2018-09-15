@@ -281,10 +281,11 @@ impl Renderable<PiiDemo> for PiiDemo {
                         <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
-                            <h1>{ "Raw event" }</h1>
-                            <p><small>
-                                { "1. Paste an event you want to strip sensitive data from. This website does not send anything to a server." }
-                            </small></p>
+                            <h1>
+                                { "1. Paste an event you want to strip sensitive data from. " }
+                                <br/>
+                                <small>{ "This website does not send anything to a server." }</small>
+                            </h1>
                         </div>
                         <textarea
                             class="col-body",
@@ -296,8 +297,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                         <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
-                            <h1>{ "Stripped event" }</h1>
-                            <p><small>{ "2. Click on values you want to remove." }</small></p>
+                            <h1>{ "2. Click on values you want to remove." }</h1>
                         </div>
                         { self.state.view() }
                         <div
@@ -310,8 +310,7 @@ impl Renderable<PiiDemo> for PiiDemo {
                         <div
                             class="col-header",
                             onclick=|_| Msg::StartEditing, >
-                            <h1>{ "PII config" }</h1>
-                            <p><small>{ "3. Copy the PII config." }</small></p>
+                            <h1>{ "3. Copy the PII config." }</h1>
                         </div>
                         <textarea
                             class="col-body",
