@@ -52,28 +52,21 @@ static PII_KINDS: &[&'static str] = &[
 ];
 
 static BUILTIN_RULES: &[&'static str] = &[
-    "@ip",
     "@ip:replace",
     "@ip:hash",
-    "@imei",
     "@imei:replace",
     "@imei:hash",
-    "@mac",
     "@mac:replace",
     "@mac:mask",
     "@mac:hash",
-    "@email",
     "@email:mask",
     "@email:replace",
     "@email:hash",
-    "@creditcard",
     "@creditcard:mask",
     "@creditcard:replace",
     "@creditcard:hash",
-    "@userpath",
     "@userpath:replace",
     "@userpath:hash",
-    "@password",
     "@password:remove",
 ];
 
