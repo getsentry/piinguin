@@ -424,7 +424,7 @@ impl Renderable<PiiDemo> for StrippedEvent {
                 <ul class="json map",>
                     {
                         for map.iter().map(|(k, v)| html! {
-                            <li><span class="json key",>{ k }</span>{ ": " }{ v.view() }</li>
+                            <li><span class="json key",>{ serde_json::to_string(k).unwrap() }</span>{ ": " }{ v.view() }</li>
                         })
                     }
                 </ul>
@@ -438,7 +438,7 @@ impl Renderable<PiiDemo> for StrippedEvent {
                     }
                 </ul>
             },
-            Some(Value::String(string)) => strippable_value(html! { <span class="json string",>{ string }</span> }),
+            Some(Value::String(string)) => strippable_value(html! { <span class="json string",>{ serde_json::to_string(&string).unwrap() }</span> }),
             Some(Value::U32(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
             Some(Value::U64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
             Some(Value::I32(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),

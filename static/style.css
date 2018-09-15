@@ -89,14 +89,6 @@ pre {
     font: 14px monospace;
 }
 
-.json.string:before, 
-.json.string:after,
-.json.key:before,
-.json.key:after
-{
-    content: '"';
-}
-
 .json.string {
     color: green;
 }
