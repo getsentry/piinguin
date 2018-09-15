@@ -85,7 +85,7 @@ pre {
     float: left;
 }
 
-.json {
+.json, textarea {
     font: 14px monospace;
 }
 
