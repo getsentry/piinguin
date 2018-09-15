@@ -267,6 +267,7 @@ impl Renderable<PiiDemo> for PiiDemo {
     fn view(&self) -> Html<Self> {
         html! {
             <div class={ format!("state-{}", self.state).to_lowercase() },>
+                <title>{ "Piinguin: PII processing playground" }</title>
                 <link
                     rel="stylesheet",
                     href="./style.css", />
