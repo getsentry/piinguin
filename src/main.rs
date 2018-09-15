@@ -19,19 +19,15 @@ use marshal::protocol::{Annotated, Event, Value};
 type SensitiveEvent = Annotated<Event>;
 type StrippedEvent = Annotated<Value>;
 
-static DEFAULT_EVENT: &'static str = r#"
-{
+static DEFAULT_EVENT: &'static str = r#"{
   "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234",
   "level": "warning",
   "extra": {
     "foo": [1, 2, 3, "127.0.0.1"]
   }
-}
-"#;
+}"#;
 
-static DEFAULT_CONFIG: &'static str = r#"
-{}
-"#;
+static DEFAULT_CONFIG: &'static str = r#"{}"#;
 
 static PII_KINDS: &[&'static str] = &[
     "freeform",

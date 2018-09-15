@@ -2,6 +2,7 @@ html, body {
     height: 100vh;
     padding: 0;
     margin: 0;
+    font-family: Arial;
 }
 
 .table {
@@ -17,16 +18,20 @@ html, body {
     margin: 10px;
     display: flex;
     flex-direction: column;
-    width: 33%;
-    flex-grow: 1;
+    width: 25%;
 }
+
+.col:nth-of-type(2) {
+    width: 50%;
+}
+
 
 h1 {
     font: 24px Georgia;
 }
 
 h2 {
-    font: 20px Arial;
+    font-size: 14px;
 }
 
 .col-header > p {
