@@ -131,10 +131,6 @@ small {
 }
 
 a.rule-choice,
-.json.array:before,
-.json.array:after,
-.json.map:before,
-.json.map:after,
 .json.string,
 .json.number {
     cursor: pointer;

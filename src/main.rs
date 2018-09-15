@@ -95,7 +95,7 @@ fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a 
     }
 }
 
-fn get_rule_suggestions(
+fn get_rule_suggestions_for_value(
     event: &SensitiveEvent,
     config: &PiiConfig,
     path: &str,
@@ -244,7 +244,7 @@ impl Component for PiiDemo {
                 self.state = State::Editing;
             }
             Msg::SelectPiiRule { path } => {
-                let suggestions = get_rule_suggestions(
+                let suggestions = get_rule_suggestions_for_value(
                     &self
                         .get_sensitive_event()
                         .expect("Current event unparseable"),
@@ -365,6 +365,15 @@ impl Renderable<PiiDemo> for State {
 
 impl Renderable<PiiDemo> for StrippedEvent {
     fn view(&self) -> Html<PiiDemo> {
+        let path = self.meta().path().expect("No path").to_owned();
+
+        let wrap_strippable = |html| html! {
+            <a class="strippable",
+                onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
+                { html }
+            </a>
+        };
+
         let mut value = match self.value() {
             Some(Value::Map(map)) => html! {
                 <ul class="json map",>
@@ -384,24 +393,16 @@ impl Renderable<PiiDemo> for StrippedEvent {
                     }
                 </ul>
             },
-            Some(Value::String(string)) => html! { <span class="json string",>{ string }</span> },
-            Some(Value::U32(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::U64(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::I32(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::I64(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::F32(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::F64(number)) => html! { <span class="json number",>{ number }</span> },
-            Some(Value::Bool(number)) => html! { <span class="json boolean",>{ number }</span> },
-            Some(Value::Null) => html! { <span class="json null",>{ "null" }</span> },
+            Some(Value::String(string)) => wrap_strippable(html! { <span class="json string",>{ string }</span> }),
+            Some(Value::U32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::U64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::I32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::I64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::F32(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::F64(number)) => wrap_strippable(html! { <span class="json number",>{ number }</span> }),
+            Some(Value::Bool(number)) => wrap_strippable(html! { <span class="json boolean",>{ number }</span> }),
+            Some(Value::Null) => wrap_strippable(html! { <span class="json null",>{ "null" }</span> }),
             None => html! { <i>{ "redacted" }</i> },
-        };
-
-        let path = self.meta().path().expect("No path").to_owned();
-        value = html! {
-            <a class="strippable",
-                onclick=|_| Msg::SelectPiiRule { path: path.clone() } ,>
-                { value }
-            </a>
         };
 
         if !self.meta().is_empty() {
