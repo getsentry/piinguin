@@ -1,9 +1,6 @@
 language: rust
 cache: cargo
-
-rust:
-  - stable
-  - nightly
+rust: nightly
 
 script:
   # on Travis-CI, publish the docs
@@ -12,7 +9,7 @@ script:
   - cargo web deploy --release --target wasm32-unknown-unknown
   - |
     set -e
-    if [ "$TRAVIS_RUST_VERSION" = stable ] &&
+    if [ "$TRAVIS_RUST_VERSION" = nightly ] &&
        [ "$TRAVIS_PULL_REQUEST" = false ] &&
        [ "$TRAVIS_BRANCH" = master ]; then
       git clone https://github.com/davisp/ghp-import.git
