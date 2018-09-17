@@ -8,10 +8,10 @@ rust:
 script:
   # on Travis-CI, publish the docs
   - cargo install \
-    --force \
-    --git https://github.com/untitaker/cargo-web/ \
-    --branch no-newline-before-doctype \
-    cargo-web
+      --force \
+      --git https://github.com/untitaker/cargo-web/ \
+      --branch no-newline-before-doctype \
+      cargo-web
   - rm -rf ./target/deploy/
   - cargo web deploy --release --target wasm32-unknown-unknown
   - |
@@ -22,7 +22,7 @@ script:
       git clone https://github.com/davisp/ghp-import.git
       ./ghp-import/ghp_import.py \
         -n -p -f -m "Site deploy" -b gh-pages \
-        -r https://"$GH_TOKEN"@github.com/$TRAVIS_REPO_SLUG.git \
+        -r git@github.com:$TRAVIS_REPO_SLUG.git \
         ./target/deploy/
       echo "Uploaded documentation"
     fi
