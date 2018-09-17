@@ -142,7 +142,7 @@ fn get_rule_suggestions_for_value(
 
             let new_value = get_value_by_path(&new_result, path);
             if new_value != Some(old_value) {
-                rv.push(PiiRuleSuggestion::Value {
+                rv.push(PiiRuleSuggestion {
                     pii_kind: (*pii_kind).to_owned(),
                     rule: (*rule).to_owned(),
                     config: new_config
@@ -190,28 +190,22 @@ enum State {
 }
 
 #[derive(Eq, PartialEq)]
-enum PiiRuleSuggestion {
-    Value {
-        pii_kind: String,
-        rule: String,
-        config: PiiConfig
-    }
+struct PiiRuleSuggestion {
+    pii_kind: String,
+    rule: String,
+    config: PiiConfig
 }
 
 impl Renderable<PiiDemo> for PiiRuleSuggestion {
     fn view(&self) -> Html<PiiDemo> {
-        match *self {
-            PiiRuleSuggestion::Value { ref pii_kind, ref rule, ref config } => {
-                let config = config.clone();
-                html! {
-                    <li><a
-                        class="rule-choice",
-                        onclick=|_| Msg::PiiConfigChanged(config.clone()),>
-                        { "Apply rule " }<code>{ rule }</code>
-                    { " to all " }<code>{ pii_kind }</code>
-                    { " fields" }</a></li>
-                }
-            }
+        let config = self.config.clone();
+        html! {
+            <li><a
+                class="rule-choice",
+                onclick=|_| Msg::PiiConfigChanged(config.clone()),>
+                { "Apply rule " }<code>{ &self.rule }</code>
+            { " to all " }<code>{ &self.pii_kind }</code>
+            { " fields" }</a></li>
         }
     }
 }
@@ -244,30 +238,26 @@ impl PiiDemo {
 }
 
 #[derive(PartialEq, Eq)]
-enum PiiRulesRequest {
-    Value { path: String }
+struct PiiRulesRequest {
+    path: String
 }
 
 impl PiiRulesRequest {
     fn get_suggestions(&self, pii_demo: &PiiDemo) -> Vec<PiiRuleSuggestion> {
-        match *self {
-            PiiRulesRequest::Value { ref path } => get_rule_suggestions_for_value(
-                    &pii_demo
-                        .get_sensitive_event()
-                        .expect("Current event unparseable"),
-                    &pii_demo.config,
-                    &path,
-                ).expect("Rule suggestions failed")
-        }
+        get_rule_suggestions_for_value(
+            &pii_demo
+            .get_sensitive_event()
+            .expect("Current event unparseable"),
+            &pii_demo.config,
+            &self.path,
+        ).expect("Rule suggestions failed")
     }
 }
 
 impl Renderable<PiiDemo> for PiiRulesRequest {
     fn view(&self) -> Html<PiiDemo> {
-        match *self {
-            PiiRulesRequest::Value { ref path } => html! {
-                <h2>{ "Select rule for " }<code>{ path }</code></h2>
-            }
+        html! {
+            <h2>{ "Select rule for " }<code>{ &self.path }</code></h2>
         }
     }
 }
@@ -414,7 +404,7 @@ impl Renderable<PiiDemo> for StrippedEvent {
 
         let strippable_value = |html| html! {
             <a class="strippable",
-                onclick=|_| Msg::SelectPiiRule(PiiRulesRequest::Value { path: path.clone() }) ,>
+                onclick=|_| Msg::SelectPiiRule(PiiRulesRequest { path: path.clone() }) ,>
                 { html }
             </a>
         };
@@ -423,8 +413,19 @@ impl Renderable<PiiDemo> for StrippedEvent {
             Some(Value::Map(map)) => html! {
                 <ul class="json map",>
                     {
-                        for map.iter().map(|(k, v)| html! {
-                            <li><span class="json key",>{ serde_json::to_string(k).unwrap() }</span>{ ": " }{ v.view() }</li>
+                        for map.iter().map(|(k, v)| {
+                            let path = v.meta().path().expect("No path").to_owned();
+                            html! {
+                                <li>
+                                    <a class="strippable",
+                                        onclick=|_| Msg::SelectPiiRule(PiiRulesRequest {
+                                            path: path.clone()
+                                        }), >
+                                        <span class="json key",>{ serde_json::to_string(k).unwrap() }</span>
+                                    </a>
+                                    { ": " }{ v.view() }
+                                </li>
+                            }
                         })
                     }
                 </ul>
