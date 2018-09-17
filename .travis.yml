@@ -7,7 +7,7 @@ cache:
 
 rust: nightly
 
-script:
+install:
   - echo "$DEPLOY_PRIVATE_KEY" | base64 -d > $HOME/.ssh/id_travis
   - chmod 600 $HOME/.ssh/id_travis
   - ssh-add $HOME/.ssh/id_travis
@@ -26,3 +26,5 @@ script:
         ./target/deploy/
       echo "Uploaded documentation"
     fi
+
+script: true
