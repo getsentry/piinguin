@@ -81,10 +81,6 @@ pre {
     content: none;
 }
 
-.json.key {
-    float: left;
-}
-
 .json, textarea {
     font: 14px monospace;
 }
@@ -123,8 +119,8 @@ small {
 }
 
 a.rule-choice,
-.json.string,
-.json.number {
+.strippable
+{
     cursor: pointer;
 }
 
