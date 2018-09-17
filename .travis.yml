@@ -10,6 +10,7 @@ rust: nightly
 install:
   - echo "$DEPLOY_PRIVATE_KEY" | base64 -d > $HOME/.ssh/id_travis
   - chmod 600 $HOME/.ssh/id_travis
+  - eval "$(ssh-agent -s)"
   - ssh-add $HOME/.ssh/id_travis
   - cargo web --version || cargo install --force --git https://github.com/untitaker/cargo-web/ --branch no-newline-before-doctype cargo-web
   - rm -rf ./target/deploy/
