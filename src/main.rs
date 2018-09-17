@@ -113,9 +113,7 @@ fn get_rule_suggestions_for_value(
     path: &str,
 ) -> Result<Vec<PiiRuleSuggestion>, Error> {
     let old_result = config.strip_event(event)?;
-    let old_value = get_value_by_path(&old_result, path).unwrap_or_else(|| {
-        web_panic!("Path {} not in old value", path);
-    });
+    let old_value = get_value_by_path(&old_result, path).map(|x| x.value());
 
     let parsed_config = match serde_json::from_str(&config.0)? {
         serde_json::Value::Object(x) => x,
@@ -153,6 +151,8 @@ fn get_rule_suggestions_for_value(
         Ok(())
     }
 
+    println!("Old value: {:?}", old_value);
+
     let rule_does_something = |new_config| -> Result<_, Error> {
         let new_config = PiiConfig(serde_json::to_string_pretty(&new_config)?);
         let new_result = match new_config.strip_event(event) {
@@ -160,8 +160,10 @@ fn get_rule_suggestions_for_value(
             Err(_) => return Ok(None),
         };
 
-        let new_value = get_value_by_path(&new_result, path);
-        Ok(if new_value != Some(old_value) {
+        let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
+
+        Ok(if new_value != old_value {
+            println!("Yielding value: {:?}", new_value);
             Some(new_config)
         } else {
             None
