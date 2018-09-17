@@ -7,11 +7,7 @@ rust:
 
 script:
   # on Travis-CI, publish the docs
-  - cargo install \
-      --force \
-      --git https://github.com/untitaker/cargo-web/ \
-      --branch no-newline-before-doctype \
-      cargo-web
+  - cargo install --force --git https://github.com/untitaker/cargo-web/ --branch no-newline-before-doctype cargo-web
   - rm -rf ./target/deploy/
   - cargo web deploy --release --target wasm32-unknown-unknown
   - |
