@@ -49,6 +49,7 @@ static PII_KINDS: &[&'static str] = &[
     "name",
     "email",
     "databag",
+    "anything",
 ];
 
 static BUILTIN_RULES: &[&'static str] = &[
