@@ -8,16 +8,28 @@ extern crate stdweb;
 extern crate serde_json;
 
 use std::fmt;
-use std::str::FromStr;
 
-use failure::{err_msg, Error, ResultExt};
+use failure::{Error, ResultExt};
 use yew::prelude::*;
 
-use marshal::processor::PiiConfig as ProcessorPiiConfig;
-use marshal::protocol::{Annotated, Event, Value};
+use marshal::protocol::Value;
 
-type SensitiveEvent = Annotated<Event>;
-type StrippedEvent = Annotated<Value>;
+mod suggestions;
+mod types;
+
+use suggestions::{get_rule_suggestions_for_value, PiiRuleSuggestion};
+use types::{PiiConfig, SensitiveEvent, StrippedEvent};
+
+macro_rules! web_panic {
+    () => {
+        web_panic!("Internal error");
+    };
+
+    ($($args:tt)*) => {{
+        stdweb::web::alert(&format!($($args)*));
+        panic!();
+    }}
+}
 
 static DEFAULT_EVENT: &'static str = r#"{
   "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234",
@@ -39,234 +51,12 @@ static DEFAULT_CONFIG: &'static str = r#"{
   }
 }"#;
 
-static PII_KINDS: &[&'static str] = &[
-    "freeform",
-    "ip",
-    "id",
-    "username",
-    "hostname",
-    "sensitive",
-    "name",
-    "email",
-    "databag",
-    "anything",
-];
-
-static BUILTIN_RULES: &[&'static str] = &[
-    "@ip:replace",
-    "@ip:hash",
-    "@imei:replace",
-    "@imei:hash",
-    "@mac:replace",
-    "@mac:mask",
-    "@mac:hash",
-    "@email:mask",
-    "@email:replace",
-    "@email:hash",
-    "@creditcard:mask",
-    "@creditcard:replace",
-    "@creditcard:hash",
-    "@userpath:replace",
-    "@userpath:hash",
-    "@password:remove",
-];
-
-macro_rules! web_panic {
-    () => {
-        web_panic!("Internal error");
-    };
-
-    ($($args:tt)*) => {{
-        stdweb::web::alert(&format!($($args)*));
-        panic!();
-    }}
-}
-
-fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a Annotated<Value>> {
-    if path.is_empty() || path == "." {
-        Some(value)
-    } else {
-        let parts: Vec<_> = path.splitn(2, '.').collect();
-        let segment = parts.get(0).cloned().unwrap_or_else(|| {
-            web_panic!("splitn returned zero-sized sequence: {:?}", path);
-        });
-
-        if segment.is_empty() {
-            web_panic!("Empty segment");
-        }
-
-        let new_value = match value.value() {
-            Some(Value::Array(array)) => array.get(
-                usize::from_str(segment)
-                    .unwrap_or_else(|e| web_panic!("Failed to parse array index: {:?}", e)),
-            ),
-            Some(Value::Map(map)) => map.get(segment),
-            _ => None,
-        }?;
-
-        get_value_by_path(new_value, parts.get(1).cloned().unwrap_or(""))
-    }
-}
-
-fn get_rule_suggestions_for_value(
-    event: &SensitiveEvent,
-    config: &PiiConfig,
-    path: &str,
-) -> Result<Vec<PiiRuleSuggestion>, Error> {
-    let old_result = config.strip_event(event)?;
-    let old_value = get_value_by_path(&old_result, path).map(|x| x.value());
-
-    let parsed_config = match serde_json::from_str(&config.0)? {
-        serde_json::Value::Object(x) => x,
-        x => {
-            web_panic!("Bad PII config: {:?}", x);
-        }
-    };
-
-    let mut rv = vec![];
-
-    let rules = BUILTIN_RULES.iter().map(|x| *x).chain(
-        parsed_config
-            .get("rules")
-            .and_then(|rules_value| rules_value.as_object())
-            .map(|rules_map| rules_map.keys().map(|x| &**x))
-            .into_iter()
-            .flatten(),
-    );
-
-    fn add_rule_to_pii_kind(
-        config: &mut serde_json::Map<String, serde_json::Value>,
-        pii_kind: &str,
-        rule: &str,
-    ) -> Result<(), Error> {
-        config
-            .entry("applications")
-            .or_insert(json!({}))
-            .as_object_mut()
-            .ok_or(err_msg("Bad applications value"))?
-            .entry(pii_kind)
-            .or_insert(json!([]))
-            .as_array_mut()
-            .ok_or(err_msg("Bad PII kind value"))?
-            .push(serde_json::Value::String(rule.to_string()));
-        Ok(())
-    }
-
-    println!("Old value: {:?}", old_value);
-
-    let rule_does_something = |new_config| -> Result<_, Error> {
-        let new_config = PiiConfig(serde_json::to_string_pretty(&new_config)?);
-        let new_result = match new_config.strip_event(event) {
-            Ok(x) => x,
-            Err(_) => return Ok(None),
-        };
-
-        let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
-
-        Ok(if new_value != old_value {
-            println!("Yielding value: {:?}", new_value);
-            Some(new_config)
-        } else {
-            None
-        })
-    };
-
-    for rule in rules {
-        for pii_kind in PII_KINDS {
-            let mut new_config = parsed_config.clone();
-            add_rule_to_pii_kind(&mut new_config, *pii_kind, rule)?;
-
-            if let Some(config) = rule_does_something(new_config)? {
-                rv.push(PiiRuleSuggestion::Value {
-                    pii_kind: (*pii_kind).to_owned(),
-                    rule: (*rule).to_owned(),
-                    config,
-                });
-            }
-        }
-    }
-
-    if let Some(key) = path.rsplitn(2, '.').next() {
-        if !key.is_empty() {
-            let mut new_config = parsed_config.clone();
-            let rule = format!("remove_all_{}_keys", key);
-            new_config
-                .entry("rules")
-                .or_insert(json!({}))
-                .as_object_mut()
-                .ok_or(err_msg("Bad rules value"))?
-                .insert(
-                    rule.clone(),
-                    json!({
-                    "type": "redactPair",
-                    "keyPattern": key.to_owned()
-                }),
-                );
-
-            for pii_kind in PII_KINDS {
-                let mut new_config = new_config.clone();
-                add_rule_to_pii_kind(&mut new_config, *pii_kind, &rule)?;
-
-                if let Some(config) = rule_does_something(new_config)? {
-                    rv.push(PiiRuleSuggestion::Key {
-                        pii_kind: (*pii_kind).to_owned(),
-                        key: key.to_owned(),
-                        config,
-                    });
-                }
-            }
-        }
-    }
-
-    Ok(rv)
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-struct PiiConfig(String);
-
-impl PiiConfig {
-    fn strip_event(&self, event: &SensitiveEvent) -> Result<StrippedEvent, Error> {
-        let config =
-            ProcessorPiiConfig::from_json(&self.0).context("Failed to parse PII config")?;
-
-        let mut result = StrippedEvent::from_json(
-            &config
-                .processor()
-                .process_root_value(event.clone())
-                .to_json()
-                .context("Failed to serialize PII'd event")?,
-        ).context("Failed to parse PII'd event")?;
-
-        if let Some(ref mut value) = result.value_mut() {
-            if let Value::Map(ref mut map) = value {
-                map.remove("_meta");
-            }
-        }
-
-        Ok(result)
-    }
-}
-
-#[derive(Eq, PartialEq)]
+#[derive(PartialEq)]
 enum State {
     Editing,
     SelectPiiRule {
         request: PiiRulesRequest,
         suggestions: Vec<PiiRuleSuggestion>,
-    },
-}
-
-#[derive(Eq, PartialEq)]
-enum PiiRuleSuggestion {
-    Value {
-        pii_kind: String,
-        rule: String,
-        config: PiiConfig,
-    },
-    Key {
-        pii_kind: String,
-        key: String,
-        config: PiiConfig,
     },
 }
 
@@ -306,7 +96,7 @@ impl Renderable<PiiDemo> for PiiRuleSuggestion {
         html! {
             <li><a
                 class="rule-choice",
-                onclick=|_| Msg::PiiConfigChanged(config.clone()),>
+                onclick=|_| Msg::PiiConfigChanged(serde_json::to_string_pretty(&config.0).unwrap()),>
                 { text }
             </a></li>
         }
@@ -325,7 +115,7 @@ impl fmt::Display for State {
 
 struct PiiDemo {
     event: String,
-    config: PiiConfig,
+    config: String,
     state: State,
 }
 
@@ -335,7 +125,8 @@ impl PiiDemo {
     }
     fn strip_pii(&self) -> Result<StrippedEvent, Error> {
         let event = self.get_sensitive_event()?;
-        let stripped_event = self.config.strip_event(&event)?;
+        let config: PiiConfig = PiiConfig(serde_json::from_str(&self.config).unwrap());
+        let stripped_event = config.strip_event(&event)?;
         Ok(stripped_event)
     }
 }
@@ -348,10 +139,8 @@ struct PiiRulesRequest {
 impl PiiRulesRequest {
     fn get_suggestions(&self, pii_demo: &PiiDemo) -> Vec<PiiRuleSuggestion> {
         get_rule_suggestions_for_value(
-            &pii_demo
-                .get_sensitive_event()
-                .unwrap_or_else(|e| web_panic!("Current event unparseable: {:?}", e)),
-            &pii_demo.config,
+            &pii_demo.get_sensitive_event().unwrap(),
+            &PiiConfig(serde_json::from_str(&pii_demo.config).unwrap()),
             &self.path,
         ).unwrap_or_else(|e| {
             web_panic!("{:}", e);
@@ -368,7 +157,7 @@ impl Renderable<PiiDemo> for PiiRulesRequest {
 }
 
 enum Msg {
-    PiiConfigChanged(PiiConfig),
+    PiiConfigChanged(String),
     EventInputChanged(String),
     SelectPiiRule(PiiRulesRequest),
     StartEditing,
@@ -382,7 +171,7 @@ impl Component for PiiDemo {
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         PiiDemo {
-            config: PiiConfig(DEFAULT_CONFIG.to_owned()),
+            config: DEFAULT_CONFIG.to_owned(),
             event: DEFAULT_EVENT.to_owned(),
             state: State::Editing,
         }
@@ -463,9 +252,9 @@ impl Renderable<PiiDemo> for PiiDemo {
                         </div>
                         <textarea
                             class="col-body",
-                            value=&self.config.0,
+                            value=&self.config,
                             onfocus=|_| Msg::StartEditing,
-                            oninput=|e| Msg::PiiConfigChanged(PiiConfig(e.value)), />
+                            oninput=|e| Msg::PiiConfigChanged(e.value), />
                     </div>
                 </div>
             </div>
