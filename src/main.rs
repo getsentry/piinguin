@@ -8,6 +8,7 @@ extern crate stdweb;
 extern crate serde_json;
 
 use std::fmt;
+use std::mem;
 
 use failure::{Error, ResultExt};
 use yew::prelude::*;
@@ -63,7 +64,7 @@ enum State {
 impl Renderable<PiiDemo> for PiiRuleSuggestion {
     fn view(&self) -> Html<PiiDemo> {
         let (config, text) = match *self {
-            PiiRuleSuggestion::Value {
+            PiiRuleSuggestion::ActivateRule {
                 ref pii_kind,
                 ref rule,
                 ref config,
@@ -71,20 +72,37 @@ impl Renderable<PiiDemo> for PiiRuleSuggestion {
                 config.clone(),
                 html! {
                     <span>
-                        { "Apply rule " }<code>{ &rule }</code>
-                        { " to all " }<code>{ &pii_kind }</code>
+                        <input type="checkbox", />
+                        { "Rule " }<code>{ &rule }</code>
+                        { " for all " }<code>{ &pii_kind }</code>
                         { " fields" }
                     </span>
                 },
             ),
-            PiiRuleSuggestion::Key {
+            PiiRuleSuggestion::DeactivateRule {
+                ref pii_kind,
+                ref rule,
+                ref config,
+            } => (
+                config.clone(),
+                html! {
+                    <span>
+                    <input type="checkbox", checked=true, />
+                        { "Rule " }<code>{ &rule }</code>
+                        { " for all " }<code>{ &pii_kind }</code>
+                        { " fields" }
+                    </span>
+                },
+            ),
+            PiiRuleSuggestion::RemoveKey {
                 ref pii_kind,
                 ref key,
                 ref config,
             } => (
                 config.clone(),
                 html! {
-                    <span>
+                    <span class="magic-rule",>
+                        <input type="checkbox", />
                         { "Remove keys named " }<code>{ &key }</code>
                         { " from all " }<code>{ &pii_kind }</code>
                         { " fields" }
@@ -181,7 +199,14 @@ impl Component for PiiDemo {
         match msg {
             Msg::PiiConfigChanged(value) => {
                 self.config = value;
-                self.state = State::Editing;
+                let mut state = State::Editing;
+                mem::swap(&mut state, &mut self.state);
+                if let State::SelectPiiRule { request, .. } = state {
+                    self.state = State::SelectPiiRule {
+                        suggestions: request.get_suggestions(&self),
+                        request,
+                    };
+                }
             }
             Msg::EventInputChanged(value) => {
                 self.event = value;
@@ -274,7 +299,7 @@ impl Renderable<PiiDemo> for State {
                     html! {
                         <div class="choose-rule",>
                             <strong>{ "Sorry, we don't know how to match this." }</strong>
-                            <p>{ "Click anywhere else to abort" }</p>
+                            <p>{ "Click anywhere else to close" }</p>
                         </div>
                     }
                 } else {
@@ -283,7 +308,7 @@ impl Renderable<PiiDemo> for State {
                     html! {
                         <div class="choose-rule",>
                             { request.view() }
-                            <p>{ "Click anywhere else to abort" }</p>
+                            <p>{ "Click anywhere else to close" }</p>
                             <ul>
                                 { for suggestions.into_iter().map(Renderable::view) }
                             </ul>

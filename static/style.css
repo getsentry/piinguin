@@ -119,13 +119,20 @@ small {
     background: lightyellow;
 }
 
+.choose-rule ul {
+    list-style: none;
+}
+.choose-rule li {
+    padding: 5px;
+}
+        
+
 a.rule-choice,
 .strippable
 {
     cursor: pointer;
 }
 
-a.rule-choice {
-    color: blue;
-    text-decoration: underline;
+.magic-rule {
+    font-style: italic;
 }
