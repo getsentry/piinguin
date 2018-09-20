@@ -17,7 +17,6 @@ static PII_KINDS: &[&'static str] = &[
     "name",
     "email",
     "databag",
-    "anything",
 ];
 
 static BUILTIN_RULES: &[&'static str] = &[
@@ -58,36 +57,20 @@ fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a 
 }
 
 trait PiiConfigExt: Sized {
-    fn maximize(self) -> Result<Self, Error>;
     fn add_rule(&mut self, pii_kind: &str, rule: &str) -> Result<bool, Error>;
     fn get_known_rules(&self) -> Vec<String>;
 }
 
 impl PiiConfigExt for PiiConfig {
-    /// Fill the given config with all rules we know, for every PII kind we know.
-    ///
-    /// Literally just put the cross product of
-    /// [all PII kinds] and [all builtin rules + all custom rules from `config`]
-    /// in there.
-    fn maximize(mut self) -> Result<PiiConfig, Error> {
-        for rule in self.get_known_rules() {
-            for pii_kind in PII_KINDS {
-                self.add_rule(pii_kind, &rule)?;
-            }
-        }
-
-        Ok(self)
-    }
-
     fn add_rule(&mut self, pii_kind: &str, rule: &str) -> Result<bool, Error> {
-        let mut applications = self
+        let applications = self
             .0
             .entry("applications")
             .or_insert(json!({}))
             .as_object_mut()
             .ok_or(err_msg("Bad applications value"))?;
 
-        let mut rules_for_kind = applications
+        let rules_for_kind = applications
             .entry(pii_kind)
             .or_insert(json!([]))
             .as_array_mut()
@@ -118,6 +101,35 @@ impl PiiConfigExt for PiiConfig {
     }
 }
 
+fn pii_kind_for_path(event: &StrippedEvent, path: &str) -> Result<Option<&'static str>, Error> {
+    let mut map = serde_json::Map::new();
+    map.insert(
+        "rules".to_owned(),
+        json!({
+        "piinguin_remove_everything": {
+            "redaction": {
+                "method": "remove"
+            },
+            "type": "anything"
+        }
+    }),
+    );
+    let base_config = PiiConfig(map);
+    let old_value = get_value_by_path(event, path);
+    let sensitive_event = serde_json::from_value(serde_json::to_value(&event)?)?;
+
+    for pii_kind in PII_KINDS {
+        let mut config = base_config.clone();
+        config.add_rule(pii_kind, "piinguin_remove_everything")?;
+        let new_event = config.strip_event(&sensitive_event)?;
+        let value = get_value_by_path(&new_event, path);
+        if value != old_value {
+            return Ok(Some(pii_kind));
+        }
+    }
+    Ok(None)
+}
+
 pub fn get_rule_suggestions_for_value(
     event: &SensitiveEvent,
     old_config: &PiiConfig,
@@ -130,52 +142,60 @@ pub fn get_rule_suggestions_for_value(
 
     println!("Old value: {:?}", old_value);
 
-    let rule_does_something = |new_config: PiiConfig| -> Result<_, Error> {
-        let new_result = match new_config.strip_event(event) {
-            Ok(x) => x,
-            Err(_) => return Ok(None),
+    if let Some(pii_kind) = pii_kind_for_path(
+        &serde_json::from_value(serde_json::to_value(event).unwrap()).unwrap(),
+        path,
+    )? {
+        let rule_does_something = |new_config: &PiiConfig| {
+            let new_result = match new_config.strip_event(event) {
+                Ok(x) => x,
+                Err(_) => return false,
+            };
+
+            let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
+
+            new_value != old_value
         };
 
-        let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
-
-        Ok(if new_value != old_value {
-            println!("Yielding value: {:?}", new_value);
-            Some(new_config)
-        } else {
-            None
-        })
-    };
-
-    if let Some(key) = path.rsplitn(2, '.').next() {
-        if !key.is_empty() {
+        for rule in old_config.get_known_rules() {
             let mut new_config = old_config.clone();
-            let rule = format!("remove_all_{}_keys", key);
-            new_config
-                .0
-                .entry("rules")
-                .or_insert(json!({}))
-                .as_object_mut()
-                .ok_or(err_msg("Bad rules value"))?
-                .insert(
-                    rule.clone(),
-                    json!({
-                    "type": "redactPair",
-                    "keyPattern": key.to_owned()
-                }),
-                );
-
-            for pii_kind in PII_KINDS {
-                let mut new_config = new_config.clone();
-                if !new_config.add_rule(*pii_kind, &rule)? {
-                    continue;
-                }
-
-                if let Some(config) = rule_does_something(new_config)? {
-                    rv.push(PiiRuleSuggestion::Key {
-                        pii_kind: (*pii_kind).to_owned(),
-                        key: key.to_owned(),
-                        config,
+            if new_config.add_rule(pii_kind, &rule)? {
+                if rule_does_something(&new_config) {
+                    rv.push(PiiRuleSuggestion::Value {
+                        pii_kind: pii_kind.to_owned(),
+                        rule: (*rule).to_owned(),
+                        config: new_config,
                     });
+                }
+            }
+        }
+
+        if let Some(key) = path.rsplitn(2, '.').next() {
+            if !key.is_empty() {
+                let mut new_config = old_config.clone();
+                let rule = format!("remove_all_{}_keys", key);
+                new_config
+                    .0
+                    .entry("rules")
+                    .or_insert(json!({}))
+                    .as_object_mut()
+                    .ok_or(err_msg("Bad rules value"))?
+                    .insert(
+                        rule.clone(),
+                        json!({
+                        "type": "redactPair",
+                        "keyPattern": key.to_owned()
+                    }),
+                    );
+
+                if new_config.add_rule(pii_kind, &rule)? {
+                    if rule_does_something(&new_config) {
+                        rv.push(PiiRuleSuggestion::Key {
+                            pii_kind: (*pii_kind).to_owned(),
+                            key: key.to_owned(),
+                            config: new_config,
+                        });
+                    }
                 }
             }
         }
