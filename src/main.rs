@@ -125,7 +125,7 @@ impl PiiDemo {
     }
     fn strip_pii(&self) -> Result<StrippedEvent, Error> {
         let event = self.get_sensitive_event()?;
-        let config: PiiConfig = PiiConfig(serde_json::from_str(&self.config).unwrap());
+        let config: PiiConfig = PiiConfig(serde_json::from_str(&self.config)?);
         let stripped_event = config.strip_event(&event)?;
         Ok(stripped_event)
     }

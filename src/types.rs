@@ -17,15 +17,9 @@ impl From<ProcessorPiiConfig> for PiiConfig {
     }
 }
 
-impl From<PiiConfig> for ProcessorPiiConfig {
-    fn from(config: PiiConfig) -> ProcessorPiiConfig {
-        ProcessorPiiConfig::from_json(&serde_json::to_string(&config.0).unwrap()).unwrap()
-    }
-}
-
 impl PiiConfig {
     pub fn strip_event(&self, event: &SensitiveEvent) -> Result<StrippedEvent, Error> {
-        let config: ProcessorPiiConfig = self.clone().into();
+        let config = ProcessorPiiConfig::from_json(&serde_json::to_string(&self.0).unwrap())?;
 
         let mut result = StrippedEvent::from_json(
             &config
