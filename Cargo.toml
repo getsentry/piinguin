@@ -6,7 +6,7 @@ authors = ["Sentry <hello@sentry.io>"]
 [dependencies]
 yew = { git = "https://github.com/DenisKolodin/yew", features = ["toml", "yaml", "msgpack", "cbor"] }
 stdweb = "*"
-marshal = { git = "https://github.com/getsentry/marshal", rev = "2383b8114c6ee5b003a90f91a343150a3f3833de" }
+marshal = { git = "https://github.com/getsentry/marshal", rev = "6094c3a36d450344be9fde38f0242ad7a4330851" }
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"

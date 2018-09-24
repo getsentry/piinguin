@@ -1,42 +1,12 @@
 use std::str::FromStr;
 
+use marshal::processor::{BUILTIN_RULES, PII_KINDS};
 use marshal::protocol::{Annotated, Value};
 use serde_json;
 
 use failure::{err_msg, Error};
 
 use types::*;
-
-static PII_KINDS: &[&'static str] = &[
-    "freeform",
-    "ip",
-    "id",
-    "username",
-    "hostname",
-    "sensitive",
-    "name",
-    "email",
-    "databag",
-];
-
-static BUILTIN_RULES: &[&'static str] = &[
-    "@ip:replace",
-    "@ip:hash",
-    "@imei:replace",
-    "@imei:hash",
-    "@mac:replace",
-    "@mac:mask",
-    "@mac:hash",
-    "@email:mask",
-    "@email:replace",
-    "@email:hash",
-    "@creditcard:mask",
-    "@creditcard:replace",
-    "@creditcard:hash",
-    "@userpath:replace",
-    "@userpath:hash",
-    "@password:remove",
-];
 
 fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a Annotated<Value>> {
     if path.is_empty() || path == "." {
