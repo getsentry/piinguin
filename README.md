@@ -1,7 +1,7 @@
 # piinguin
 
-Playground website for [marshal](https://github.com/getsentry/marshal/). Paste
-event and PII config, get stripped event out.
+Playground website for [libsemaphore](https://github.com/getsentry/semaphore/),
+aka Relay.  Paste event and PII config, get stripped event out.
 
 Runs fully in the browser thanks to the power of compilers.
 
