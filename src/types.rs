@@ -1,5 +1,7 @@
-use marshal::processor::PiiConfig as ProcessorPiiConfig;
-use marshal::protocol::{Annotated, Event, Value};
+use semaphore_general::pii::{PiiConfig as ProcessorPiiConfig, PiiProcessor};
+use semaphore_general::processor::process_value;
+use semaphore_general::protocol::Event;
+use semaphore_general::types::{Annotated, Value};
 
 use failure::{Error, ResultExt};
 
@@ -21,16 +23,16 @@ impl PiiConfig {
     pub fn strip_event(&self, event: &SensitiveEvent) -> Result<StrippedEvent, Error> {
         let config = ProcessorPiiConfig::from_json(&serde_json::to_string(&self.0).unwrap())?;
 
-        let mut result = StrippedEvent::from_json(
-            &config
-                .processor()
-                .process_root_value(event.clone())
-                .to_json()
-                .context("Failed to serialize PII'd event")?,
-        ).context("Failed to parse PII'd event")?;
+        let mut event = event.clone();
+        let mut processor = PiiProcessor::new(&config);
+        process_value(&mut event, &mut processor, &Default::default());
+
+        let mut result =
+            StrippedEvent::from_json(&event.to_json().context("Failed to serialize PII'd event")?)
+                .context("Failed to parse PII'd event")?;
 
         if let Some(ref mut value) = result.value_mut() {
-            if let Value::Map(ref mut map) = value {
+            if let Value::Object(ref mut map) = value {
                 map.remove("_meta");
             }
         }

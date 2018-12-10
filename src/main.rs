@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate yew;
 extern crate failure;
-extern crate marshal;
+extern crate semaphore_general;
 extern crate stdweb;
 #[macro_use]
 extern crate serde_json;
@@ -13,7 +13,8 @@ use std::mem;
 use failure::{Error, ResultExt};
 use yew::prelude::*;
 
-use marshal::protocol::Value;
+use semaphore_general::processor::ProcessingState;
+use semaphore_general::types::Value;
 
 mod suggestions;
 mod types;
@@ -160,7 +161,8 @@ impl PiiRulesRequest {
             &pii_demo.get_sensitive_event().unwrap(),
             &PiiConfig(serde_json::from_str(&pii_demo.config).unwrap()),
             &self.path,
-        ).unwrap_or_else(|e| {
+        )
+        .unwrap_or_else(|e| {
             web_panic!("{:}", e);
         })
     }
@@ -303,14 +305,12 @@ impl Renderable<PiiDemo> for State {
                         </div>
                     }
                 } else {
-                    let suggestions = suggestions.clone();
-
                     html! {
                         <div class="choose-rule",>
                             { request.view() }
                             <p>{ "Click anywhere else to close" }</p>
                             <ul>
-                                { for suggestions.into_iter().map(Renderable::view) }
+                                { for suggestions.iter().map(Renderable::view) }
                             </ul>
                         </div>
                     }
@@ -322,7 +322,16 @@ impl Renderable<PiiDemo> for State {
 
 impl Renderable<PiiDemo> for StrippedEvent {
     fn view(&self) -> Html<PiiDemo> {
-        let path = self.meta().path().expect("No path").to_owned();
+        Renderable::view(&(self.clone(), ProcessingState::root()))
+    }
+}
+
+impl<'a> Renderable<PiiDemo> for (StrippedEvent, &'a ProcessingState<'a>) {
+    fn view(&self) -> Html<PiiDemo> {
+        let (ref annotated, ref state) = *self;
+        let state = state.clone();
+
+        let path = format!("{}", state.path());
 
         let strippable_value = |html| {
             html! {
@@ -333,12 +342,14 @@ impl Renderable<PiiDemo> for StrippedEvent {
             }
         };
 
-        let mut value = match self.value() {
-            Some(Value::Map(map)) => html! {
+        let mut value = match annotated.value() {
+            Some(&Value::Object(ref map)) => html! {
                 <ul class="json map",>
                     {
                         for map.iter().map(|(k, v)| {
-                            let path = v.meta().path().expect("No path").to_owned();
+                            let state = state.clone();
+                            let inner_state = state.enter_borrowed(k, state.inner_attrs());
+                            let path = format!("{}", inner_state.path());
                             html! {
                                 <li>
                                     <a class="strippable",
@@ -347,49 +358,62 @@ impl Renderable<PiiDemo> for StrippedEvent {
                                         }), >
                                         <span class="json key",>{ serde_json::to_string(k).unwrap() }</span>
                                     </a>
-                                    { ": " }{ v.view() }
+                                    { ": " }{ (v.clone(), &inner_state).view() }
                                 </li>
                             }
                         })
                     }
                 </ul>
             },
-            Some(Value::Array(values)) => html! {
+            Some(&Value::Array(ref values)) => html! {
                 <ul class="json array",>
                     {
-                        for values.iter().map(|v| html! {
-                            <li class="json element",>{ v.view() }</li>
+                        for values.iter().enumerate().map(move |(i, v)| {
+                            let state = state.clone();
+                            let inner_state = state.enter_index(i, state.inner_attrs());
+
+                            html! {
+                                <li class="json element",>{ (v.clone(), &inner_state).view() }</li>
+                            }
                         })
                     }
                 </ul>
             },
-            Some(Value::String(string)) => strippable_value(html! { <span class="json string",>{ serde_json::to_string(&string).unwrap() }</span> }),
-            Some(Value::U64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::I64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::F64(number)) => strippable_value(html! { <span class="json number",>{ number }</span> }),
-            Some(Value::Bool(number)) => strippable_value(html! { <span class="json boolean",>{ number }</span> }),
-            Some(Value::Null) => strippable_value(html! { <span class="json null",>{ "null" }</span> }),
+            Some(&Value::String(ref string)) => strippable_value(
+                html! { <span class="json string",>{ serde_json::to_string(&string).unwrap() }</span> },
+            ),
+            Some(&Value::U64(number)) => {
+                strippable_value(html! { <span class="json number",>{ number }</span> })
+            }
+            Some(&Value::I64(number)) => {
+                strippable_value(html! { <span class="json number",>{ number }</span> })
+            }
+            Some(&Value::F64(number)) => {
+                strippable_value(html! { <span class="json number",>{ number }</span> })
+            }
+            Some(&Value::Bool(number)) => {
+                strippable_value(html! { <span class="json boolean",>{ number }</span> })
+            }
+            Some(&Value::Null) => {
+                strippable_value(html! { <span class="json null",>{ "null" }</span> })
+            }
             None => html! { <i>{ "redacted" }</i> },
         };
 
-        if !self.meta().is_empty() {
-            let meta = self.meta();
+        if !annotated.meta().is_empty() {
+            let meta = annotated.meta();
 
             value = html! {
                 <span class="annotated",>
                     <small class="meta",>
                         <div class="remarks",>
-                            { serde_json::to_string(&meta.remarks)
-                                .expect("Failed to serialize remark") }
+                            {
+                                serde_json::to_string(&meta.iter_remarks().collect::<Vec<_>>()).unwrap()
+                            }
                         </div>
                         <div class="errors",>
                             {
-                                if !meta.errors.is_empty() {
-                                    serde_json::to_string(&meta.errors)
-                                        .expect("Failed to serialize meta errors")
-                                } else {
-                                    String::new()
-                                }
+                                serde_json::to_string(&meta.iter_errors().collect::<Vec<_>>()).unwrap()
                             }
                         </div>
                     </small>
