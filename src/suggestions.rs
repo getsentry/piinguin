@@ -101,35 +101,6 @@ impl PiiConfigExt for PiiConfig {
     }
 }
 
-fn pii_kind_for_path(event: &StrippedEvent, path: &str) -> Result<Option<&'static str>, Error> {
-    let mut map = serde_json::Map::new();
-    map.insert(
-        "rules".to_owned(),
-        json!({
-            "piinguin_remove_everything": {
-                "redaction": {
-                    "method": "remove"
-                },
-                "type": "anything"
-            }
-        }),
-    );
-    let base_config = PiiConfig(map);
-    let old_value = get_value_by_path(event, path);
-    let sensitive_event = Annotated::from_json(&serde_json::to_string(&event)?)?;
-
-    for pii_kind in PII_KINDS {
-        let mut config = base_config.clone();
-        config.add_rule(pii_kind, "piinguin_remove_everything")?;
-        let new_event = config.strip_event(&sensitive_event)?;
-        let value = get_value_by_path(&new_event, path);
-        if value != old_value {
-            return Ok(Some(pii_kind));
-        }
-    }
-    Ok(None)
-}
-
 pub fn get_rule_suggestions_for_value(
     event: &SensitiveEvent,
     old_config: &PiiConfig,
@@ -142,21 +113,18 @@ pub fn get_rule_suggestions_for_value(
 
     println!("Old value: {:?}", old_value);
 
-    if let Some(pii_kind) = pii_kind_for_path(
-        &Annotated::from_json(&event.to_json().unwrap()).unwrap(),
-        path,
-    )? {
-        let rule_does_something = |new_config: &PiiConfig| {
-            let new_result = match new_config.strip_event(event) {
-                Ok(x) => x,
-                Err(_) => return false,
-            };
-
-            let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
-
-            new_value != old_value
+    let rule_does_something = |new_config: &PiiConfig| {
+        let new_result = match new_config.strip_event(event) {
+            Ok(x) => x,
+            Err(_) => return false,
         };
 
+        let new_value = get_value_by_path(&new_result, path).map(|x| x.value());
+
+        new_value != old_value
+    };
+
+    for pii_kind in PII_KINDS {
         let known_rules = old_config.get_known_rules();
 
         for rule in &known_rules {
@@ -165,7 +133,7 @@ pub fn get_rule_suggestions_for_value(
                 // Adding a rule for the value
                 if rule_does_something(&new_config) {
                     rv.push(PiiRuleSuggestion::ActivateRule {
-                        pii_kind: pii_kind.to_owned(),
+                        pii_kind: pii_kind.to_string(),
                         rule: (*rule).to_owned(),
                         config: new_config,
                     });
@@ -177,7 +145,7 @@ pub fn get_rule_suggestions_for_value(
                 // Removing a rule for the value
                 if rule_does_something(&new_config) {
                     rv.push(PiiRuleSuggestion::DeactivateRule {
-                        pii_kind: pii_kind.to_owned(),
+                        pii_kind: pii_kind.to_string(),
                         rule: (*rule).to_owned(),
                         config: new_config,
                     });
@@ -199,14 +167,14 @@ pub fn get_rule_suggestions_for_value(
                     .insert(
                         rule.clone(),
                         json!({
-                            "type": "redactPair",
+                            "type": "redact_pair",
                             "keyPattern": key.to_owned()
                         }),
                     );
 
                 if new_config.add_rule(pii_kind, &rule)? && rule_does_something(&new_config) {
                     rv.push(PiiRuleSuggestion::RemoveKey {
-                        pii_kind: (*pii_kind).to_owned(),
+                        pii_kind: pii_kind.to_string(),
                         key: key.to_owned(),
                         config: new_config,
                     });
