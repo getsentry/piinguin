@@ -322,14 +322,13 @@ impl Renderable<PiiDemo> for State {
 
 impl Renderable<PiiDemo> for StrippedEvent {
     fn view(&self) -> Html<PiiDemo> {
-        Renderable::view(&(self.clone(), ProcessingState::root()))
+        Renderable::view(&(self, ProcessingState::root()))
     }
 }
 
-impl<'a> Renderable<PiiDemo> for (StrippedEvent, &'a ProcessingState<'a>) {
+impl<'a> Renderable<PiiDemo> for (&StrippedEvent, &'a ProcessingState<'a>) {
     fn view(&self) -> Html<PiiDemo> {
         let (ref annotated, ref state) = *self;
-        let state = state.clone();
 
         let path = format!("{}", state.path());
 
@@ -347,7 +346,6 @@ impl<'a> Renderable<PiiDemo> for (StrippedEvent, &'a ProcessingState<'a>) {
                 <ul class="json map",>
                     {
                         for map.iter().map(|(k, v)| {
-                            let state = state.clone();
                             let inner_state = state.enter_borrowed(k, state.inner_attrs());
                             let path = format!("{}", inner_state.path());
                             html! {
@@ -358,7 +356,7 @@ impl<'a> Renderable<PiiDemo> for (StrippedEvent, &'a ProcessingState<'a>) {
                                         }), >
                                         <span class="json key",>{ serde_json::to_string(k).unwrap() }</span>
                                     </a>
-                                    { ": " }{ (v.clone(), &inner_state).view() }
+                                    { ": " }{ (v, &inner_state).view() }
                                 </li>
                             }
                         })
@@ -369,11 +367,10 @@ impl<'a> Renderable<PiiDemo> for (StrippedEvent, &'a ProcessingState<'a>) {
                 <ul class="json array",>
                     {
                         for values.iter().enumerate().map(move |(i, v)| {
-                            let state = state.clone();
                             let inner_state = state.enter_index(i, state.inner_attrs());
 
                             html! {
-                                <li class="json element",>{ (v.clone(), &inner_state).view() }</li>
+                                <li class="json element",>{ (v, &inner_state).view() }</li>
                             }
                         })
                     }
