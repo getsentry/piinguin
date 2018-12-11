@@ -6,11 +6,7 @@ authors = ["Sentry <hello@sentry.io>"]
 [dependencies]
 yew = { git = "https://github.com/DenisKolodin/yew", features = ["toml", "yaml", "msgpack", "cbor"] }
 stdweb = "*"
-marshal = { git = "https://github.com/getsentry/marshal", rev = "6094c3a36d450344be9fde38f0242ad7a4330851" }
+semaphore-general = { git = "https://github.com/getsentry/semaphore", version = "*" }
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"
-
-[patch.crates-io]
-serde = { git = "https://github.com/mitsuhiko/serde", rev = "880a8c0181ad7202950f24cc8f6872994913441d" }
-serde_derive = { git = "https://github.com/mitsuhiko/serde", rev = "880a8c0181ad7202950f24cc8f6872994913441d" }
