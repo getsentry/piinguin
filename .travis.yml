@@ -12,7 +12,7 @@ install:
   - chmod 600 $HOME/.ssh/id_travis
   - eval "$(ssh-agent -s)"
   - ssh-add $HOME/.ssh/id_travis
-  - cargo web --version || cargo install --force --git https://github.com/untitaker/cargo-web/ --branch no-newline-before-doctype cargo-web
+  - cargo web --version || cargo install --force cargo-web
   - rm -rf ./target/deploy/
   - cargo web deploy --release --target wasm32-unknown-unknown
   - |
