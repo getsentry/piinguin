@@ -60,14 +60,14 @@ impl PiiConfigExt for PiiConfig {
 
     fn remove_rule(&mut self, pii_kind: &str, rule: &str) -> Result<bool, Error> {
         let applications = match self.0.get_mut("applications") {
-            Some(mut x) => x
+            Some(x) => x
                 .as_object_mut()
                 .ok_or_else(|| err_msg("Bad applications value"))?,
             None => return Ok(false),
         };
 
         let rules_for_kind = match applications.get_mut(pii_kind) {
-            Some(mut x) => x
+            Some(x) => x
                 .as_array_mut()
                 .ok_or_else(|| err_msg("Bad PII kind value"))?,
             None => return Ok(false),

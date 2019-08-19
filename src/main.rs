@@ -1,5 +1,4 @@
 #![recursion_limit = "2048"]
-#[macro_use]
 extern crate yew;
 extern crate failure;
 extern crate semaphore_general;
@@ -346,7 +345,7 @@ impl<'a> Renderable<PiiDemo> for (&StrippedEvent, &'a ProcessingState<'a>) {
                 <ul class="json map",>
                     {
                         for map.iter().map(|(k, v)| {
-                            let inner_state = state.enter_borrowed(k, state.inner_attrs());
+                            let inner_state = state.enter_borrowed(k, state.inner_attrs(), None);
                             let path = format!("{}", inner_state.path());
                             html! {
                                 <li>
@@ -367,7 +366,7 @@ impl<'a> Renderable<PiiDemo> for (&StrippedEvent, &'a ProcessingState<'a>) {
                 <ul class="json array",>
                     {
                         for values.iter().enumerate().map(move |(i, v)| {
-                            let inner_state = state.enter_index(i, state.inner_attrs());
+                            let inner_state = state.enter_index(i, state.inner_attrs(), None);
 
                             html! {
                                 <li class="json element",>{ (v, &inner_state).view() }</li>
@@ -391,10 +390,9 @@ impl<'a> Renderable<PiiDemo> for (&StrippedEvent, &'a ProcessingState<'a>) {
             Some(&Value::Bool(number)) => {
                 strippable_value(html! { <span class="json boolean",>{ number }</span> })
             }
-            Some(&Value::Null) => {
+            None => {
                 strippable_value(html! { <span class="json null",>{ "null" }</span> })
             }
-            None => html! { <i>{ "redacted" }</i> },
         };
 
         if !annotated.meta().is_empty() {
