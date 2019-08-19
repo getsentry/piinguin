@@ -10,3 +10,6 @@ semaphore-general = { git = "https://github.com/getsentry/semaphore", version = 
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"
+
+[patch.crates-io]
+clicolors-control = { git = "https://github.com/untitaker/clicolors-control", rev = "9f2459089e51b4e105a90b00a692a7c1909733cf" }
