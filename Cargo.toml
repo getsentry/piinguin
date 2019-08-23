@@ -7,8 +7,7 @@ authors = ["Sentry <hello@sentry.io>"]
 yew = { git = "https://github.com/DenisKolodin/yew", features = ["toml", "yaml", "msgpack", "cbor"] }
 stdweb = "*"
 
-# last version that compiles for wasm
-semaphore-general = { git = "https://github.com/getsentry/semaphore", rev = "f372551d2ccf16d05222d2987a0da08258fd6823" }
+semaphore-general = { git = "https://github.com/getsentry/semaphore", default-features = false }
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"
