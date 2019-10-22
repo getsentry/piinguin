@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Sentry <hello@sentry.io>"]
 
 [dependencies]
-yew = { git = "https://github.com/DenisKolodin/yew", features = ["toml", "yaml", "msgpack", "cbor"] }
+yew = { version = "0.9", features = ["toml", "yaml", "msgpack", "cbor"] }
+
 stdweb = "*"
 
 semaphore-general = { git = "https://github.com/getsentry/semaphore", default-features = false }
