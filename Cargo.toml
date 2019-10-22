@@ -11,4 +11,6 @@ semaphore-general = { git = "https://github.com/getsentry/semaphore", default-fe
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"
-uuid = { version = "*", features = ["stdweb"] }
+
+# must be same version as in semaphore-general, not more, not less
+uuid = { version = "0.7.4", features = ["stdweb"] }
