@@ -5,13 +5,11 @@ authors = ["Sentry <hello@sentry.io>"]
 
 [dependencies]
 yew = { version = "0.9", features = ["toml", "yaml", "msgpack", "cbor"] }
-
 stdweb = "*"
-
-semaphore-general = { git = "https://github.com/getsentry/semaphore", default-features = false }
 serde = "1.0.76"
 failure = "*"
 serde_json = "*"
 
-# must be same version as in semaphore-general, not more, not less
-uuid = { version = "0.7.4", features = ["stdweb"] }
+relay-general = { git = "https://github.com/getsentry/relay", default-features = false }
+# must be same version as in relay-general, not more, not less
+uuid = { version = "0.8.1", features = ["stdweb"] }

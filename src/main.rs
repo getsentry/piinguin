@@ -1,7 +1,7 @@
 #![recursion_limit = "2048"]
 extern crate yew;
 extern crate failure;
-extern crate semaphore_general;
+extern crate relay_general;
 extern crate stdweb;
 #[macro_use]
 extern crate serde_json;
@@ -12,8 +12,8 @@ use std::mem;
 use failure::{Error, ResultExt};
 use yew::prelude::*;
 
-use semaphore_general::processor::ProcessingState;
-use semaphore_general::types::Value;
+use relay_general::processor::ProcessingState;
+use relay_general::types::Value;
 
 mod suggestions;
 mod types;
@@ -33,10 +33,10 @@ macro_rules! web_panic {
 }
 
 static DEFAULT_EVENT: &'static str = r#"{
-  "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234",
   "level": "warning",
   "extra": {
-    "foo": [1, 2, 3, "127.0.0.1"]
+    "foo": [1, 2, 3, "127.0.0.1"],
+    "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234"
   }
 }"#;
 

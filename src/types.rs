@@ -1,7 +1,7 @@
-use semaphore_general::pii::{PiiConfig as ProcessorPiiConfig, PiiProcessor};
-use semaphore_general::processor::process_value;
-use semaphore_general::protocol::Event;
-use semaphore_general::types::{Annotated, Value};
+use relay_general::pii::{PiiConfig as ProcessorPiiConfig, PiiProcessor};
+use relay_general::processor::process_value;
+use relay_general::protocol::Event;
+use relay_general::types::{Annotated, Value};
 
 use failure::{Error, ResultExt};
 
@@ -25,7 +25,7 @@ impl PiiConfig {
 
         let mut event = event.clone();
         let mut processor = PiiProcessor::new(&config);
-        process_value(&mut event, &mut processor, &Default::default());
+        process_value(&mut event, &mut processor, &Default::default()).context("Failed to PII-strip event")?;
 
         let mut result =
             StrippedEvent::from_json(&event.to_json().context("Failed to serialize PII'd event")?)

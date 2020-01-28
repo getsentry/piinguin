@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use semaphore_general::pii::BUILTIN_RULES;
-use semaphore_general::types::{Annotated, Value};
+use relay_general::pii::BUILTIN_RULES;
+use relay_general::types::{Annotated, Value};
 use serde_json;
 
 use failure::{err_msg, Error};
