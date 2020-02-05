@@ -121,12 +121,23 @@ small {
 }
 
 .choose-rule {
-    padding: 5px 15px;
     background: lightyellow;
+    max-height: 30%;
+    overflow: auto;
+}
+
+.choose-rule-header {
+    padding: 5px 15px;
+}
+
+.pii-kind-section {
+    padding: 5px 15px;
+    float: left;
 }
 
 .choose-rule ul {
     list-style: none;
+    padding: 0;
 }
 .choose-rule li {
     padding: 5px;

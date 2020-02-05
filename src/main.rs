@@ -293,11 +293,13 @@ impl Renderable<PiiDemo> for State {
                 } else {
                     html! {
                         <div class="choose-rule",>
+                            <div class="choose-rule-header",>
                             { request.view() }
                             <p>{ "Click anywhere else to close" }</p>
+                            </div>
                             {
                                 for sections.iter().map(|(pii_kind, suggestions)| html! {
-                                    <div>
+                                    <div class="pii-kind-section",>
                                         <h3>{ "On "}{ pii_kind }</h3>
                                         <ul>
                                             { for suggestions.iter().cloned().map(Renderable::view) }

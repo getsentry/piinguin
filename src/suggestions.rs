@@ -8,7 +8,26 @@ use failure::{err_msg, Error};
 
 use types::*;
 
-static PII_KINDS: &[&'static str] = &["**"];
+static PII_KINDS: &[&'static str] = &[
+    "**",
+    "$string",
+    "$number",
+    "$boolean",
+    "$datetime",
+    "$array",
+    "$object",
+    "$event",
+    "$exception",
+    "$stacktrace",
+    "$frame",
+    "$request",
+    "$user",
+    "$logentry",
+    "$thread",
+    "$breadcrumb",
+    "$span",
+    "$sdk",
+];
 
 fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a Annotated<Value>> {
     if path.is_empty() || path == "." {
@@ -175,7 +194,7 @@ pub enum PiiRuleSuggestion {
         pii_kind: String,
         rule: String,
         config: PiiConfig,
-    }
+    },
 }
 
 impl PiiRuleSuggestion {
