@@ -8,7 +8,7 @@ use failure::{err_msg, Error};
 
 use types::*;
 
-static PII_KINDS: &[&'static str] = &["text", "container"];
+static PII_KINDS: &[&'static str] = &["**"];
 
 fn get_value_by_path<'a>(value: &'a Annotated<Value>, path: &str) -> Option<&'a Annotated<Value>> {
     if path.is_empty() || path == "." {
