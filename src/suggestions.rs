@@ -9,7 +9,6 @@ use failure::{err_msg, Error};
 use types::*;
 
 static PII_KINDS: &[&'static str] = &[
-    "**",
     "$string",
     "$number",
     "$boolean",
