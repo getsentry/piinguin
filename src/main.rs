@@ -8,6 +8,7 @@ extern crate serde_json;
 
 use std::fmt;
 use std::mem;
+use std::collections::BTreeMap;
 
 use failure::{Error, ResultExt};
 use yew::prelude::*;
@@ -65,50 +66,31 @@ impl Renderable<PiiDemo> for PiiRuleSuggestion {
     fn view(&self) -> Html<PiiDemo> {
         let (config, text) = match *self {
             PiiRuleSuggestion::ActivateRule {
-                ref pii_kind,
                 ref rule,
                 ref config,
+                ..
             } => (
                 config.clone(),
                 html! {
                     <span>
                         <input type="checkbox", />
-                        { "Rule " }<code>{ &rule }</code>
-                        { " for all " }<code>{ &pii_kind }</code>
-                        { " fields" }
+                        <code>{ &rule }</code>
                     </span>
                 },
             ),
             PiiRuleSuggestion::DeactivateRule {
-                ref pii_kind,
                 ref rule,
                 ref config,
+                ..
             } => (
                 config.clone(),
                 html! {
                     <span>
                     <input type="checkbox", checked=true, />
-                        { "Rule " }<code>{ &rule }</code>
-                        { " for all " }<code>{ &pii_kind }</code>
-                        { " fields" }
+                        <code>{ &rule }</code>
                     </span>
                 },
-            ),
-            PiiRuleSuggestion::RemoveKey {
-                ref pii_kind,
-                ref key,
-                ref config,
-            } => (
-                config.clone(),
-                html! {
-                    <span class="magic-rule",>
-                        <input type="checkbox", />
-                        { "Remove keys named " }<code>{ &key }</code>
-                        { " from all " }<code>{ &pii_kind }</code>
-                        { " fields" }
-                    </span>
-                },
-            ),
+            )
         };
 
         html! {
@@ -296,6 +278,11 @@ impl Renderable<PiiDemo> for State {
                 ref request,
                 ref suggestions,
             } => {
+                let mut sections = BTreeMap::new();
+                for suggestion in suggestions {
+                    sections.entry(suggestion.pii_kind()).or_insert_with(Vec::new).push(suggestion);
+                }
+
                 if suggestions.is_empty() {
                     html! {
                         <div class="choose-rule",>
@@ -308,9 +295,16 @@ impl Renderable<PiiDemo> for State {
                         <div class="choose-rule",>
                             { request.view() }
                             <p>{ "Click anywhere else to close" }</p>
-                            <ul>
-                                { for suggestions.iter().map(Renderable::view) }
-                            </ul>
+                            {
+                                for sections.iter().map(|(pii_kind, suggestions)| html! {
+                                    <div>
+                                        <h3>{ "On "}{ pii_kind }</h3>
+                                        <ul>
+                                            { for suggestions.iter().cloned().map(Renderable::view) }
+                                        </ul>
+                                    </div>
+                                })
+                            }
                         </div>
                     }
                 }

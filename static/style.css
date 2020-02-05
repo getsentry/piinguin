@@ -33,6 +33,12 @@ h2 {
     font-size: 14px;
 }
 
+h3 {
+    font-size: 12px;
+    color: gray;
+    margin-bottom: 0;
+}
+
 .col-header {
     min-height: 80px;
 }
