@@ -37,7 +37,7 @@ static DEFAULT_EVENT: &'static str = r#"{
   "level": "warning",
   "extra": {
     "foo": [1, 2, 3, "127.0.0.1"],
-    "message": "Paid with card 1234-1234-1234-1234 on d/deadbeef1234"
+    "message": "Paid with card 4242 4242 4242 4242 on d/deadbeef1234"
   }
 }"#;
 
