@@ -592,7 +592,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "relay-general"
 version = "0.5.1"
-source = "git+https://github.com/getsentry/relay#b39483bb015dde9a0ad8f9f36d3035496d85cdf3"
+source = "git+https://github.com/getsentry/relay#e0ee12fe0ce262cfe3335ccb8a28665e1f293dbf"
 dependencies = [
  "bytecount 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -623,7 +623,7 @@ dependencies = [
 [[package]]
 name = "relay-general-derive"
 version = "0.5.1"
-source = "git+https://github.com/getsentry/relay#b39483bb015dde9a0ad8f9f36d3035496d85cdf3"
+source = "git+https://github.com/getsentry/relay#e0ee12fe0ce262cfe3335ccb8a28665e1f293dbf"
 dependencies = [
  "proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
