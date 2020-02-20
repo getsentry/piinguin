@@ -1,0 +1,155 @@
+html, body {
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+    font-family: Arial;
+}
+
+.table {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    flex-direction: row;
+    height: 100vh;
+    width: 100%;
+}
+
+.col {
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.col:nth-of-type(1) { width: 30%; }
+.col:nth-of-type(2) { width: 40%; }
+.col:nth-of-type(3) { width: 30%; }
+
+
+h1 {
+    font: 18px Georgia;
+}
+
+h2 {
+    font-size: 14px;
+}
+
+h3 {
+    font-size: 12px;
+    color: gray;
+    margin-bottom: 0;
+}
+
+.col-header {
+    min-height: 80px;
+}
+
+.col-body {
+    width: 100%;
+    overflow: auto;
+    flex-grow: 1;
+}
+
+pre {
+    white-space: pre-wrap;
+}
+
+.json.map:before {
+    content: "{";
+}
+
+.json.map:after {
+    content: "}";
+}
+
+.json.array:before {
+    content: "[";
+}
+
+.json.array:after {
+    content: "]";
+}
+
+.json.map, .json.array {
+    list-style: none;
+    padding-left: 0;
+    display: inline;
+}
+
+.json > li {
+    margin-left: 15px;
+    display: block;
+}
+
+.json > li:after {
+    content: ",";
+}
+
+.json > li:last-child:after {
+    content: none;
+}
+
+.json, textarea {
+    font: 14px monospace;
+}
+
+.json.string {
+    color: green;
+}
+
+.json.number {
+    color: blue;
+}
+
+.annotated {
+    background-color: yellow;
+}
+
+.meta {
+    float: right;
+}
+
+small {
+    color: gray;
+}
+
+.strippable:hover {
+    background-color: lightgray;
+}
+
+.state-select-pii-rule textarea {
+    color: gray;
+}
+
+.choose-rule {
+    background: lightyellow;
+    max-height: 30%;
+    overflow: auto;
+}
+
+.choose-rule-header {
+    padding: 5px 15px;
+}
+
+.pii-kind-section {
+    padding: 5px 15px;
+    float: left;
+}
+
+.choose-rule ul {
+    list-style: none;
+    padding: 0;
+}
+.choose-rule li {
+    padding: 5px;
+}
+        
+
+a.rule-choice,
+.strippable
+{
+    cursor: pointer;
+}
+
+.magic-rule {
+    font-style: italic;
+}
